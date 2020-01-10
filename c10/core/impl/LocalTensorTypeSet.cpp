@@ -14,17 +14,17 @@ namespace {
 #ifndef CAFFE2_FB_LIMITED_MOBILE_CAPABILITY
 
 // NB: POD, zero initialized!
-thread_local PODLocalTensorTypeSet raw_local_tensor_type_set;
+thread_local PODLocalDispatchKeySet raw_local_tensor_type_set;
 
 #else // defined(CAFFE2_FB_LIMITED_MOBILE_CAPABILITY)
 
-static PODLocalTensorTypeSet raw_local_tensor_type_set;
+static PODLocalDispatchKeySet raw_local_tensor_type_set;
 
 #endif
 
 } // anonymous namespace
 
-LocalTensorTypeSet tls_local_tensor_type_set() {
+LocalDispatchKeySet tls_local_tensor_type_set() {
   // Hack until variable performance is fixed
   if (FLAGS_disable_variable_dispatch) {
     raw_local_tensor_type_set.set_excluded(
@@ -34,17 +34,17 @@ LocalTensorTypeSet tls_local_tensor_type_set() {
   return raw_local_tensor_type_set;
 }
 
-// An RAII guard could snapshot and restore the entire state (entire TensorTypeSet) as
+// An RAII guard could snapshot and restore the entire state (entire DispatchKeySet) as
 // opposed to only snapshotting and restoring the state of its assigned DispatchKey.
 // I'm not sure which is better.  If only the RAII API is used, the two choices are
 // not distinguishable.
 //
-// However, if the guard chooses to snapshot and restore the entire TensorTypeSet,
+// However, if the guard chooses to snapshot and restore the entire DispatchKeySet,
 // the interaction with the non-RAII API changes.  Consider this sequence of events:
 // - An RAII guard is declared for a particular DispatchKey, but snapshots the entire
-//   current TensorTypeSet.
+//   current DispatchKeySet.
 // - A call to the non-RAII API changes the state for a different DispatchKey.
-// - The RAII guard goes out of scope, restoring the entire TensorTypeSet it snapshotted
+// - The RAII guard goes out of scope, restoring the entire DispatchKeySet it snapshotted
 //   (which restores the state for its own assigned DispatchKey and wipes out the state
 //   for the other DispatchKey set by the non-RAII API).
 
@@ -81,7 +81,7 @@ ExcludeTensorTypeIdGuard::~ExcludeTensorTypeIdGuard() {
 }
 
 // Non-RAII API
-// Please prefer using the RAII API. See declarations in LocalTensorTypeSet.h for details.
+// Please prefer using the RAII API. See declarations in LocalDispatchKeySet.h for details.
 
 bool tls_is_tensor_type_id_excluded(DispatchKey x) {
   return raw_local_tensor_type_set.excluded().has(x);
